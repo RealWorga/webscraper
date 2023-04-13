@@ -1,6 +1,6 @@
+import os
 import undetected_chromedriver as uc
 from bs4 import BeautifulSoup
-import os
 from reportlab.lib.pagesizes import letter
 from reportlab.pdfgen import canvas
 
@@ -47,13 +47,10 @@ def get_text_from_url(url):
         driver.quit()
 
 if __name__ == "__main__":
-    url = input("Enter the URL of the webpage: ")
+    url = input("Enter URL of the webpage: ")
     text = get_text_from_url(url)
 
     if text:
-        print("\nExtracted Text:")
-        print(text.encode("utf-8"))
-
         save_folder = "docs/webscraped-pdfs"
         if not os.path.exists(save_folder):
             os.makedirs(save_folder)
