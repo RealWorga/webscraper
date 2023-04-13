@@ -6,7 +6,7 @@ def get_text_from_url(url):
     chrome_options.add_argument("--headless")
     #chrome_options.binary_location = "C:/Program Files/Google/Chrome/Application/chrome.exe"
 
-    driver = uc.Chrome(executable_path=chrome_driver_path, options=chrome_options)
+    driver = uc.Chrome(options=chrome_options)
 
     try:
         driver.get(url)
