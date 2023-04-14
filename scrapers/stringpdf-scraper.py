@@ -4,10 +4,11 @@ from bs4 import BeautifulSoup
 from reportlab.lib.pagesizes import letter
 from reportlab.pdfgen import canvas
 import openai
-from secret import openai_key
+from secret import openai_key, system_role, urls
 import re
 from textwrap import TextWrapper
-from secret import system_role
+from pathlib import Path
+import string
 
 openai.api_key = openai_key
 
@@ -26,6 +27,13 @@ def clean_text_gpt4(text):
     )
 
     return response.choices[0].message['content'].strip()
+
+def remove_non_ascii_chars(text):
+    return ''.join(char for char in text if ord(char) < 128)
+
+def remove_non_printable_chars(text):
+    printable_chars = set(string.printable)
+    return ''.join(filter(lambda x: x in printable_chars, text))
 
 def save_text_to_pdf(text, pdf_path):
     c = canvas.Canvas(pdf_path, pagesize=letter)
@@ -76,21 +84,19 @@ def get_text_from_url(url):
     finally:
         driver.quit()
 
-if __name__ == "__main__":
-    urls = [
-        "urls..."
-    ]
+def process_urls(urls):
+    save_folder = Path("../docs/webscraped-pdfs")
+    save_folder.mkdir(parents=True, exist_ok=True)
 
     for url in urls:
         text, title = get_text_from_url(url)
         title = sanitize_title(title)
 
         if text:
-            save_folder = "../docs/webscraped-pdfs"
-            if not os.path.exists(save_folder):
-                os.makedirs(save_folder)
-
-            pdf_path = f"{save_folder}/{title}.pdf"
-
-            save_text_to_pdf(clean_text_gpt4(text), pdf_path)
+            pdf_path = str(save_folder / f"{title}.pdf")
+            cleaned_text = remove_non_ascii_chars(remove_non_printable_chars(clean_text_gpt4(text)))
+            save_text_to_pdf(cleaned_text, pdf_path)
             print(f"\nText saved to {pdf_path}")
+
+if __name__ == "__main__":
+    process_urls(urls)
