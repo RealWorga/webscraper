@@ -129,3 +129,4 @@ dmypy.json
 .pyre/
 
 docs/webscraped-pdfs
+secret.py
