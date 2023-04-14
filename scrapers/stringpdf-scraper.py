@@ -12,7 +12,7 @@ import string
 
 openai.api_key = openai_key
 
-def sanitize_title(title, max_length=50):
+def sanitize_title(title, max_length=60):
     title = re.sub(r'[^\w\s-]', '', title)
     title = re.sub(r'\s+', '-', title)
     return title[:max_length]
