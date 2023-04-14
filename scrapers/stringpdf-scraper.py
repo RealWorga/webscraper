@@ -3,6 +3,29 @@ import undetected_chromedriver as uc
 from bs4 import BeautifulSoup
 from reportlab.lib.pagesizes import letter
 from reportlab.pdfgen import canvas
+import openai
+from secret import openai_key
+import re
+from textwrap import TextWrapper
+from secret import system_role
+
+openai.api_key = openai_key
+
+def sanitize_title(title, max_length=50):
+    title = re.sub(r'[^\w\s-]', '', title)
+    title = re.sub(r'\s+', '-', title)
+    return title[:max_length]
+
+
+def clean_text_gpt4(text):
+    prompt = f"Clean this text: {text}, Cleaned:"
+    response = openai.ChatCompletion.create(
+        model="gpt-4",
+        messages=[{"role": "system", "content": system_role},
+                  {"role": "user", "content": prompt}]
+    )
+
+    return response.choices[0].message['content'].strip()
 
 def save_text_to_pdf(text, pdf_path):
     c = canvas.Canvas(pdf_path, pagesize=letter)
@@ -10,13 +33,18 @@ def save_text_to_pdf(text, pdf_path):
     text_object.setTextOrigin(10, 750)
     text_object.setFont("Helvetica", 12)
 
+    wrapper = TextWrapper(width=80)
     lines = text.split('\n')
     for line in lines:
-        text_object.textLine(line)
+        wrapped_lines = wrapper.wrap(line)
+        for wrapped_line in wrapped_lines:
+            text_object.textLine(wrapped_line)
+        text_object.moveCursor(0, -14)
 
     c.drawText(text_object)
     c.showPage()
     c.save()
+
 
 def get_text_from_url(url):
     chrome_options = uc.ChromeOptions()
@@ -29,6 +57,8 @@ def get_text_from_url(url):
         driver.get(url)
         soup = BeautifulSoup(driver.page_source, 'html.parser')
 
+        title = soup.title.string.replace(' ', '-').replace('|', '-').replace(':', '-').replace('/', '-')
+
         for script in soup(["script", "style"]):
             script.extract()
 
@@ -37,7 +67,7 @@ def get_text_from_url(url):
         chunks = (phrase.strip() for line in lines for phrase in line.split("  "))
         text = '\n'.join(chunk for chunk in chunks if chunk)
 
-        return text
+        return (text, title)
 
     except Exception as e:
         print(f"Error: {e}")
@@ -47,18 +77,20 @@ def get_text_from_url(url):
         driver.quit()
 
 if __name__ == "__main__":
-    url = input("Enter URL of the webpage: ")
-    text = get_text_from_url(url)
+    urls = [
+        "urls..."
+    ]
 
-    if text:
-        save_folder = "docs/webscraped-pdfs"
-        if not os.path.exists(save_folder):
-            os.makedirs(save_folder)
+    for url in urls:
+        text, title = get_text_from_url(url)
+        title = sanitize_title(title)
 
-        num = 1
-        while os.path.exists(f"{save_folder}/{num}.pdf"):
-            num += 1
+        if text:
+            save_folder = "../docs/webscraped-pdfs"
+            if not os.path.exists(save_folder):
+                os.makedirs(save_folder)
 
-        pdf_path = f"{save_folder}/{num}.pdf"
-        save_text_to_pdf(text, pdf_path)
-        print(f"\nText saved to {pdf_path}")
+            pdf_path = f"{save_folder}/{title}.pdf"
+
+            save_text_to_pdf(clean_text_gpt4(text), pdf_path)
+            print(f"\nText saved to {pdf_path}")
